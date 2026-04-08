@@ -1,0 +1,37 @@
+# Overlay that adds CPU + memory limits to each TeaStore service so you
+# can watch which one saturates first under the StepLoadShape ramp.
+#
+# Use together with the base file:
+#   docker compose \
+#     -f examples/docker/docker-compose_kieker.yaml \
+#     -f examples/docker/docker-compose_kieker_limited.yaml \
+#     up -d
+#
+# To prove a single service is the bottleneck, copy this file, RAISE just
+# that service's limits (e.g. persistence cpus: "2.0"), and rerun. If
+# overall throughput climbs, that service was the constraint.
+
+services:
+  persistence:
+    cpus: 0.5
+    mem_limit: 512m
+
+  auth:
+    cpus: 0.5
+    mem_limit: 512m
+
+  image:
+    cpus: 1.0
+    mem_limit: 1g
+
+  recommender:
+    cpus: 1.0
+    mem_limit: 1g
+
+  webui:
+    cpus: 1.0
+    mem_limit: 1g
+
+  db:
+    cpus: 1.0
+    mem_limit: 1g
