@@ -12,9 +12,16 @@
 # overall throughput climbs, that service was the constraint.
 
 services:
+  # persistence is the single hardest-loaded backend in TeaStore. It seeds
+  # the dataset on startup (users, products, orders, order-items) AND every
+  # other service hits it for reads. At 0.5 CPU + 512m it could not finish
+  # seeding before recommender's startup training query timed out (15s
+  # Grizzly client timeout in ServiceLoadBalancer), leaving the recommender
+  # permanently model-less because RECOMMENDER_RETRAIN_LOOP_TIME=0.
+  # 1.0 CPU + 1g gives it room to seed and serve concurrently.
   persistence:
-    cpus: 0.5
-    mem_limit: 512m
+    cpus: 1.0
+    mem_limit: 1g
 
   auth:
     cpus: 0.5
@@ -28,9 +35,14 @@ services:
     cpus: 1.0
     mem_limit: 1g
 
+  # webui is the front-door service that fans out to auth/persistence/
+  # image/recommender on every page. It needs more headroom than the
+  # backends — Tomcat 10 + 200 threads + httpclient pools + the (still-
+  # loaded) kieker AspectJ agent push baseline RSS close to 1g before
+  # any load arrives. CPU stays at 1.0 so it can still saturate.
   webui:
     cpus: 1.0
-    mem_limit: 1g
+    mem_limit: 2g
 
   db:
     cpus: 1.0
